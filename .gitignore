@@ -1,0 +1,6 @@
+# Project Virtual Environment
+.venv/
+
+# Python Bytecode Caches
+__pycache__/
+*.pyc
