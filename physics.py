@@ -59,7 +59,7 @@ def constant_thrust_contact_time(h0, v0, thrust, mass, g):
     acceleration = vertical_acceleration(thrust, mass, g)
     return constant_acceleration_contact_time(h0, v0, acceleration)
 
-def simulate_constant_thrust(h0, v0, thrust, mass, g, dt, max_time=20):
+def simulate_constant_acceleration(h0, v0, acceleration, dt, max_time=20):
     elapsed = 0
     history = []
 
@@ -68,7 +68,6 @@ def simulate_constant_thrust(h0, v0, thrust, mass, g, dt, max_time=20):
     if dt <= 0:
         raise ValueError("dt must be a positive value.")
 
-    acceleration = vertical_acceleration(thrust, mass, g)
     contact_time = constant_acceleration_contact_time(h0, v0, acceleration)
 
     if contact_time is not None and contact_time <= max_time:
@@ -91,6 +90,13 @@ def simulate_constant_thrust(h0, v0, thrust, mass, g, dt, max_time=20):
         "history": history,
         "termination_reason": termination_reason
     }
+
+def simulate_constant_thrust(h0, v0, thrust, mass, g, dt, max_time=20):
+    acceleration = vertical_acceleration(thrust, mass, g)
+    result = simulate_constant_acceleration(h0, v0, acceleration, dt, max_time=max_time)
+
+    return result
+
 
 def free_fall_velocity(v0, g, elapsed):
     if g < 0:
@@ -122,36 +128,11 @@ def free_fall_contact_time(h0, v0, g):
 
 
 def simulate_free_fall(h0, v0, g, dt, max_time=20):
-    elapsed = 0
-    history = []
+    if g < 0:
+        raise ValueError("Gravity magnitude must be non-negative.")
+    result = simulate_constant_acceleration(h0, v0, -g, dt, max_time=max_time)
 
-    if max_time < 0:
-        raise ValueError("Simulation time must be non-negative.")
-    if dt <= 0:
-        raise ValueError("dt must be a positive value.")
-
-    contact_time = free_fall_contact_time(h0, v0, g)
-    if contact_time is not None and contact_time <= max_time:
-        end_time = contact_time
-        termination_reason = "ground_contact"
-    else:
-        end_time = max_time
-        termination_reason = "time_limit"
-
-
-    while True:
-        current_h = free_fall_height(h0, v0, g, elapsed)
-        current_v = free_fall_velocity(v0, g, elapsed)
-        history.append((elapsed, current_h, current_v))
-
-        if elapsed >= end_time:
-            break
-        elapsed = min(end_time, elapsed + dt)
-
-    return {
-        "history": history,
-        "termination_reason": termination_reason
-    }
+    return result
 
 h0 = 100
 v0 = -10
