@@ -1,6 +1,7 @@
 import unittest
 
-from physics import free_fall_velocity, simulate_free_fall, simulate_constant_thrust
+from physics import (free_fall_velocity, simulate_free_fall,
+                     simulate_constant_thrust, simulate_delayed_ignition)
 
 class TestFreeFall(unittest.TestCase):
     def test_velocity_after_two_seconds(self):
@@ -61,7 +62,26 @@ class TestFreeFall(unittest.TestCase):
         self.assertAlmostEqual(last_velocity, -45.40925015897091, places=6)
         self.assertEqual(result["termination_reason"], "ground_contact")
 
-        
+    def test_delayed_ignition_splits_large_time_step(self):
+        height = 100
+        velocity = -10
+        mass = 100
+        g = 9.81
+        ignition_time = 2
+        thrust = 2000
+        dt = 10
+        max_time = 3
+
+        result = simulate_delayed_ignition(height, velocity, mass, g, ignition_time, thrust, dt, max_time)
+
+        last_time, last_height, last_velocity = result["history"][-1]
+        termination_reason = result["termination_reason"]
+        self.assertAlmostEqual(last_time, 3, places=6)
+        self.assertAlmostEqual(last_height, 35.855, places=6)
+        self.assertAlmostEqual(last_velocity, -19.43, places=6)
+        self.assertEqual(termination_reason, "time_limit")
+
+
 
 if __name__ == "__main__":
     unittest.main()
