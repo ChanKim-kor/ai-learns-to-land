@@ -134,19 +134,19 @@ def simulate_free_fall(h0, v0, g, dt, max_time=20):
 
     return result
 
-h0 = 100
-v0 = -10
-g = 9.81
-t = 0
-dt = 0.1
+if __name__ == "__main__":
+    h0 = 100
+    v0 = -10
+    g = 9.81
+    dt = 0.1
 
-result = simulate_free_fall(h0, v0, g, dt)
+    result = simulate_free_fall(h0, v0, g, dt)
 
-for t, height, velocity in result["history"]:
-    print(
-        f"Time: {t:.5f} [s]  "
-        f"Height: {height:.5f} [m]  "
-        f"Velocity: {velocity:.5f} [m/s]"
-    )
+    for t, height, velocity in result["history"]:
+        print(
+            f"Time: {t:.5f} [s]  "
+            f"Height: {height:.5f} [m]  "
+            f"Velocity: {velocity:.5f} [m/s]"
+        )
 
-print(f"Termination reason: {result['termination_reason']}")
+    print(f"Termination reason: {result['termination_reason']}")
