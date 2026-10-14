@@ -1,7 +1,8 @@
 import unittest
 
 from physics import (free_fall_velocity, simulate_free_fall,
-                     simulate_constant_thrust, simulate_delayed_ignition)
+                     simulate_constant_thrust, simulate_delayed_ignition,
+                     simulate_fueled_delayed_ignition)
 
 class TestFreeFall(unittest.TestCase):
     def test_velocity_after_two_seconds(self):
@@ -80,6 +81,28 @@ class TestFreeFall(unittest.TestCase):
         self.assertAlmostEqual(last_height, 35.855, places=6)
         self.assertAlmostEqual(last_velocity, -19.43, places=6)
         self.assertEqual(termination_reason, "time_limit")
+
+    def test_fuel_depletion_turns_off_engine(self):
+        g = 9.81
+        result = simulate_fueled_delayed_ignition(
+            100, -10, 100, 0.05, g,
+            0, 500, 200, 0.3, max_time=1
+        )
+
+        last_time, last_height, last_velocity, last_fuel = result["history"][-1]
+        termination_reason = result["termination_reason"]
+
+        for record in result["history"]:
+            if record[3] == 0:
+                depletion_record = record
+                break
+
+        self.assertEqual(termination_reason, "time_limit")
+        self.assertAlmostEqual(last_fuel, 0, places=6)
+        self.assertAlmostEqual(depletion_record[0], 0.196133, places=6)
+        self.assertAlmostEqual(last_velocity,
+                               depletion_record[2] - g * (last_time - depletion_record[0]),
+                               places=6)
 
 
 

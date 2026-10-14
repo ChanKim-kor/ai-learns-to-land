@@ -142,11 +142,11 @@ def advance_vertical_state(height, velocity, acceleration, dt):
 
 def delayed_ignition_thrust(elapsed, ignition_time, burn_thrust):
     if elapsed < 0:
-        raise ValueError("Elapsed time must be non-negative")
+        raise ValueError("Elapsed time must be non-negative.")
     if ignition_time < 0:
-        raise ValueError("Ignition time must be non-negative")
+        raise ValueError("Ignition time must be non-negative.")
     if burn_thrust < 0:
-        raise ValueError("Thrust force must be non-negative")
+        raise ValueError("Thrust force must be non-negative.")
 
     if elapsed < ignition_time:
         return 0
@@ -211,7 +211,133 @@ def simulate_delayed_ignition(h0, v0, mass, g, ignition_time, burn_thrust, dt, m
         "termination_reason": termination_reason
     }
 
+def propellant_mass_flow_rate(thrust, specific_impulse, g0=9.80665):
+    if thrust < 0:
+        raise ValueError("Thrust must be non-negative.")
+    if specific_impulse <= 0:
+        raise ValueError("Specific impulse must be positive.")
+    if g0 <= 0:
+        raise ValueError("g0 must be positive.")
 
+    q = thrust / (specific_impulse * g0)
+    return q
+
+def propellant_depletion_time(propellant_mass, mass_flow_rate):
+    if propellant_mass < 0:
+        raise ValueError("Propellant mass must be non-negative")
+    if mass_flow_rate < 0:
+        raise ValueError("Propellant mass flow rate must be non-negative")
+
+    if propellant_mass == 0:
+        return 0
+    if mass_flow_rate == 0:
+        return None
+
+    return propellant_mass / mass_flow_rate
+
+def advance_burning_state(height, velocity, propellant_mass, dry_mass, thrust, specific_impulse, g, dt):
+    if dry_mass <= 0:
+        raise ValueError("Dry mass must be non-negative")
+    if propellant_mass <= 0:
+        raise ValueError("Propellant mass must be positive")
+    total_mass = dry_mass + propellant_mass
+    q = propellant_mass_flow_rate(thrust, specific_impulse)
+    depletion_time = propellant_depletion_time(propellant_mass, q)
+    if depletion_time is not None and dt > depletion_time:
+        raise ValueError("Time step is longer than propellant depletion time")
+    acceleration = vertical_acceleration(thrust, total_mass, g)
+    next_height, next_velocity = advance_vertical_state(height, velocity, acceleration, dt)
+    remaining_propellant_mass = propellant_mass - q * dt
+
+    return next_height, next_velocity, remaining_propellant_mass
+
+def simulate_fueled_delayed_ignition(h0, v0, dry_mass, 
+                                     propellant_mass, g, ignition_time, burn_thrust, 
+                                     specific_impulse, dt, max_time=20):
+    if h0 < 0:
+        raise ValueError("Height must be non-negative")
+    if g < 0:
+        raise ValueError("g must be non-negative.")
+    if dt <= 0:
+        raise ValueError("Simulation time step must be positive.")
+    if max_time < 0:
+        raise ValueError("Max simulation time must be non-negative.")
+    if dry_mass <= 0:
+        raise ValueError("Dry mass must be positive.")
+    if propellant_mass < 0:
+        raise ValueError("Propellant mass must be non-negative.")
+    if specific_impulse <= 0:
+        raise ValueError("Specific impulse must be positive.")
+    if ignition_time < 0:
+        raise ValueError("Ignition time must be non-negative.")
+    if burn_thrust < 0:
+        raise ValueError("Thrust force must be non-negative.")
+
+    height = h0
+    velocity = v0
+    remaining_propellant = propellant_mass
+    elapsed = 0
+    ground_contact = False
+
+    history = [(elapsed, height, velocity, remaining_propellant)] # Initial state
+
+    while True:
+        if height <= 0 or ground_contact:
+            ground_contact = True
+            termination_reason = "ground_contact"
+            break
+        if elapsed >= max_time:
+            termination_reason = "time_limit"
+            break
+
+        fuel_depleted = False
+        commanded_thrust = delayed_ignition_thrust(elapsed, ignition_time, burn_thrust)
+        actual_thrust = commanded_thrust if remaining_propellant > 0 else 0
+        total_mass = dry_mass + remaining_propellant
+        acceleration = vertical_acceleration(actual_thrust, total_mass, g)
+
+        q = propellant_mass_flow_rate(actual_thrust, specific_impulse)
+
+        next_time = min(elapsed + dt, max_time)
+
+        if elapsed < ignition_time:
+            next_time = min(next_time, ignition_time)
+
+        if q > 0:
+            depletion_dt = propellant_depletion_time(remaining_propellant, q)
+            depletion_time = elapsed + depletion_dt
+
+            if depletion_time <= next_time:
+                next_time = depletion_time
+                fuel_depleted = True
+
+        step_dt = depletion_dt if fuel_depleted else next_time - elapsed
+
+        contact_dt = constant_acceleration_contact_time(height, velocity, acceleration)
+        if contact_dt is not None and contact_dt <= step_dt:
+            if contact_dt < step_dt:
+                fuel_depleted = False
+            next_time = elapsed + contact_dt
+            step_dt = contact_dt
+            ground_contact = True
+
+
+        if actual_thrust > 0:
+            height, velocity, remaining_propellant = advance_burning_state(height, velocity, remaining_propellant,
+                                                                           dry_mass, actual_thrust, specific_impulse,
+                                                                           g, step_dt)
+        else:
+            height, velocity = advance_vertical_state(height, velocity, acceleration, step_dt)
+
+        elapsed = next_time
+        if fuel_depleted: remaining_propellant = 0
+        history.append((elapsed, height, velocity, remaining_propellant))
+
+
+    return{
+        "history": history,
+        "termination_reason": termination_reason
+    }
 
 if __name__ == "__main__":
     h0 = 100
