@@ -24,14 +24,6 @@ def constant_acceleration_height(h0, v0, acceleration, elapsed):
 
     return h0 + v0 * elapsed + 0.5 * acceleration * (elapsed ** 2)
 
-def constant_thrust_velocity(v0, thrust, mass, g, elapsed):
-    acceleration = vertical_acceleration(thrust, mass, g)
-    return constant_acceleration_velocity(v0, acceleration, elapsed)
-
-def constant_thrust_height(h0, v0, thrust, mass, g, elapsed):
-    acceleration = vertical_acceleration(thrust, mass, g)
-    return constant_acceleration_height(h0, v0, acceleration, elapsed)
-
 def constant_acceleration_contact_time(h0, v0, acceleration):
     if h0 < 0:
         raise ValueError("Height must be non-negative")
@@ -55,9 +47,6 @@ def constant_acceleration_contact_time(h0, v0, acceleration):
             else:
                 return min(root_list)
 
-def constant_thrust_contact_time(h0, v0, thrust, mass, g):
-    acceleration = vertical_acceleration(thrust, mass, g)
-    return constant_acceleration_contact_time(h0, v0, acceleration)
 
 def simulate_constant_acceleration(h0, v0, acceleration, dt, max_time=20):
     elapsed = 0
@@ -102,28 +91,6 @@ def free_fall_velocity(v0, g, elapsed):
         raise ValueError("Gravity magnitude must be non-negative.")
     
     return constant_acceleration_velocity(v0, -g, elapsed)
-
-def free_fall_height(h0, v0, g, elapsed):
-    if g < 0:
-        raise ValueError("Gravity magnitude must be non-negative.")
-
-    return constant_acceleration_height(h0, v0, -g, elapsed)
-
-def free_fall_contact_time(h0, v0, g):
-    if h0 < 0:
-        raise ValueError("Height must be non-negative.")
-    if g < 0:
-        raise ValueError("Gravity magnitude must be non-negative.")
-
-    if h0 == 0:
-        return 0
-    if g > 0:
-        return (v0 + math.sqrt(v0 ** 2 + 2 * g * h0))/g
-    else: # g = 0
-        if v0 < 0:
-            return -h0 / v0
-        else:
-            return None
 
 def simulate_free_fall(h0, v0, g, dt, max_time=20):
     if g < 0:
@@ -338,36 +305,3 @@ def simulate_fueled_delayed_ignition(h0, v0, dry_mass,
         "history": history,
         "termination_reason": termination_reason
     }
-
-if __name__ == "__main__":
-    h0 = 100
-    v0 = -10
-    mass = 100
-    g = 9.81
-    dt = 0.3
-    ignition_time = 4
-    burn_thrust = 2000
-    max_time = 10
-
-    result = simulate_delayed_ignition(h0, v0, mass, g, ignition_time, burn_thrust, dt, max_time)
-    history = result["history"]
-
-    for elapsed, height, velocity in history:
-        print(
-                f"Time: {elapsed:.5f} [s]  "
-                f"Height: {height:.5f} [m]  "
-                f"Velocity: {velocity:.5f} [m/s]"
-            )
-    print(f"Termination reason: {result["termination_reason"]}")
-
-
-    # result = simulate_free_fall(h0, v0, g, dt)
-
-    # for t, height, velocity in result["history"]:
-    #     print(
-    #         f"Time: {t:.5f} [s]  "
-    #         f"Height: {height:.5f} [m]  "
-    #         f"Velocity: {velocity:.5f} [m/s]"
-    #     )
-
-    # print(f"Termination reason: {result['termination_reason']}")
