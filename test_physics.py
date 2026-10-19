@@ -2,7 +2,7 @@ import unittest
 
 from physics import (free_fall_velocity, simulate_free_fall,
                      simulate_constant_thrust, simulate_delayed_ignition,
-                     simulate_fueled_delayed_ignition)
+                     simulate_fueled_delayed_ignition, step_fueled_flight)
 
 class TestFreeFall(unittest.TestCase):
     def test_velocity_after_two_seconds(self):
@@ -104,6 +104,57 @@ class TestFreeFall(unittest.TestCase):
                                depletion_record[2] - g * (last_time - depletion_record[0]),
                                places=6)
 
+    def test_step_with_empty_fuel_continues_free_fall(self):
+        result = step_fueled_flight(
+            height=100,
+            velocity=-10,
+            dry_mass=100,
+            propellant_mass=0,
+            commanded_thrust=2000,
+            specific_impulse=200,
+            g=9.81, dt=0.5
+        )
+
+        self.assertAlmostEqual(result["height"], 93.77375, places=6)
+        self.assertAlmostEqual(result["velocity"], -14.905, places=6)
+        self.assertEqual(result["propellant_mass"], 0)
+        self.assertAlmostEqual(result["elapsed"], 0.5, places=6)
+        self.assertFalse(result["ground_contact"])
+        self.assertTrue(result["fuel_depleted"])
+
+    def test_step_stops_at_fuel_depleted(self):
+        result = step_fueled_flight(
+            height=100,
+            velocity=-10,
+            dry_mass=100,
+            propellant_mass=0.05,
+            commanded_thrust=500,
+            specific_impulse=200,
+            g=9.81, dt=0.3
+        )
+
+        self.assertAlmostEqual(result["elapsed"], 0.196133, places=6)
+        self.assertEqual(result["propellant_mass"], 0)
+        self.assertTrue(result["fuel_depleted"])
+        self.assertFalse(result["ground_contact"])
+
+    def test_step_ground_contact_precededs_fuel_depletion(self):
+        result = step_fueled_flight(
+            height=1,
+            velocity=-10,
+            dry_mass=99,
+            propellant_mass=1,
+            commanded_thrust=1000,
+            specific_impulse=100,
+            g=10, dt=2
+        )
+
+        self.assertAlmostEqual(result["elapsed"], 0.1, places=6)
+        self.assertAlmostEqual(result["height"], 0, places=6)
+        self.assertAlmostEqual(result["velocity"], -10, places=6)
+        self.assertAlmostEqual(result["propellant_mass"], 0.8980283787022072, places=6)
+        self.assertTrue(result["ground_contact"])
+        self.assertFalse(result["fuel_depleted"])
 
 
 if __name__ == "__main__":

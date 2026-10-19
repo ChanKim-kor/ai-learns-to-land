@@ -148,7 +148,6 @@ def simulate_constant_acceleration(h0, v0, acceleration, dt, max_time=20):
         "termination_reason": termination_reason
     }
 
-
 def simulate_constant_thrust(h0, v0, thrust, mass, g, dt, max_time=20):
     acceleration = vertical_acceleration(thrust, mass, g)
     result = simulate_constant_acceleration(h0, v0, acceleration, dt, max_time=max_time)
@@ -275,50 +274,29 @@ def simulate_fueled_delayed_ignition(h0, v0, dry_mass,
             termination_reason = "time_limit"
             break
 
-        fuel_depleted = False
-        # Determine actual thrust and freeze acceleration for this step.
+        # Choose the thrust command and limit the step at scheduled events.
         commanded_thrust = delayed_ignition_thrust(elapsed, ignition_time, burn_thrust)
-        actual_thrust = commanded_thrust if remaining_propellant > 0 else 0
-        total_mass = dry_mass + remaining_propellant
-        acceleration = vertical_acceleration(actual_thrust, total_mass, g)
-
-        q = propellant_mass_flow_rate(actual_thrust, specific_impulse)
-        # Limit the step by scheduled events and available propellant.
         next_time = min(elapsed + dt, max_time)
-
         if elapsed < ignition_time:
             next_time = min(next_time, ignition_time)
+        requested_dt = next_time - elapsed
+        step_result = step_fueled_flight(height=height,
+                                         velocity=velocity,
+                                         dry_mass=dry_mass,
+                                         propellant_mass=remaining_propellant,
+                                         commanded_thrust=commanded_thrust,
+                                         specific_impulse=specific_impulse,
+                                         g=g, dt=requested_dt)
+        height = step_result["height"]
+        velocity = step_result["velocity"]
+        remaining_propellant = step_result["propellant_mass"]
+        ground_contact = step_result["ground_contact"]
 
-        if q > 0:
-            depletion_dt = propellant_depletion_time(remaining_propellant, q)
-            depletion_time = elapsed + depletion_dt
-
-            if depletion_time <= next_time:
-                next_time = depletion_time
-                fuel_depleted = True
-
-        step_dt = depletion_dt if fuel_depleted else next_time - elapsed
-        # Check for ground contact within the proposed step.
-        contact_dt = constant_acceleration_contact_time(height, velocity, acceleration)
-        if contact_dt is not None and contact_dt <= step_dt:
-            if contact_dt < step_dt:
-                fuel_depleted = False
-            next_time = elapsed + contact_dt
-            step_dt = contact_dt
-            ground_contact = True
-
-        # Advance motion and propellant using the selected step duration.
-        if actual_thrust > 0:
-            height, velocity, remaining_propellant = advance_burning_state(height, velocity, remaining_propellant,
-                                                                           dry_mass, actual_thrust, specific_impulse,
-                                                                           g, step_dt)
+        if step_result["elapsed"] == requested_dt:
+            elapsed = next_time
         else:
-            height, velocity = advance_vertical_state(height, velocity, acceleration, step_dt)
+            elapsed += step_result["elapsed"]
 
-        # Finalize events and record the updated state.
-        elapsed = next_time
-        if fuel_depleted:
-            remaining_propellant = 0
         history.append((elapsed, height, velocity, remaining_propellant))
 
 
@@ -327,6 +305,72 @@ def simulate_fueled_delayed_ignition(h0, v0, dry_mass,
         "termination_reason": termination_reason
     }
 
+def step_fueled_flight(
+        height,
+        velocity,
+        dry_mass,
+        propellant_mass,
+        commanded_thrust,
+        specific_impulse,
+        g,
+        dt,
+):
+    if height < 0:
+        raise ValueError("Height must be non-negative.")
+    if dry_mass <= 0:
+        raise ValueError("Dry_mass must be positive.")
+    if propellant_mass < 0:
+        raise ValueError("Propellant must be non-negative.")
+    if commanded_thrust < 0:
+        raise ValueError("Thrust must be non-negative.")
+    if specific_impulse <= 0:
+        raise ValueError("Specific impulse must be positive")
+    if g < 0:
+        raise ValueError("Gravity magnitude must be non-negative")
+    if dt <= 0:
+        raise ValueError("Simulation time step must be positive")
+
+    total_mass = dry_mass + propellant_mass
+    actual_thrust = commanded_thrust if propellant_mass > 0 else 0
+    q = propellant_mass_flow_rate(actual_thrust, specific_impulse)
+
+    step_dt = dt
+    depleted_this_step = False
+    ground_contact = False
+    if q > 0:
+        depletion_dt = propellant_depletion_time(propellant_mass, q)
+        if depletion_dt <= step_dt:
+            step_dt = depletion_dt
+            depleted_this_step = True
+
+    acceleration = vertical_acceleration(actual_thrust, total_mass, g=g)
+    contact_dt = constant_acceleration_contact_time(height, velocity, acceleration)
+    if contact_dt is not None and contact_dt <= step_dt:
+        if contact_dt < step_dt:
+            depleted_this_step = False
+        step_dt = contact_dt
+        ground_contact = True
+
+    if step_dt > 0:
+        if actual_thrust > 0:
+            height, velocity, propellant_mass = advance_burning_state(height, velocity, propellant_mass,
+                                                                      dry_mass, actual_thrust,
+                                                                      specific_impulse, g, step_dt)
+        else:
+            height, velocity = advance_vertical_state(height, velocity, acceleration, step_dt)
+
+    if depleted_this_step:
+        propellant_mass = 0
+
+    return {
+        "height": height,
+        "velocity": velocity,
+        "propellant_mass": propellant_mass,
+        "elapsed": step_dt,
+        "ground_contact": ground_contact,
+        "fuel_depleted": propellant_mass == 0,
+    }
+    
 # Free-fall convenience function
 
 def free_fall_velocity(v0, g, elapsed):

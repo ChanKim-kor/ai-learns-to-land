@@ -14,8 +14,8 @@ def animate_flight(result, ignition_time, burn_thrust):
             ["rocket", "velocity"],
             ["rocket", "propellant"],
         ],
-        figsize = (11, 7),
-        layout = "constrained",
+        figsize=(11, 7),
+        layout="constrained",
     )
     axes["velocity"].sharex(axes["height"])
     axes["propellant"].sharex(axes["height"])
@@ -35,12 +35,12 @@ def animate_flight(result, ignition_time, burn_thrust):
     ax_rocket.set_xlim(-10, 10)
     ax_rocket.set_ylim(-5, max(120, 1.2 * max(heights)))
 
-    ax_rocket.axhline(y = 0, color = "black")
+    ax_rocket.axhline(y=0, color="black")
     rocket, = ax_rocket.plot(
         [0], [heights[0]],
         marker="^",
-        markersize = 12,
-        linestyle = "None",)
+        markersize=12,
+        linestyle="None",)
 
     flame_offset = ScaledTranslation(
         0,
@@ -50,12 +50,12 @@ def animate_flight(result, ignition_time, burn_thrust):
 
     flame, = ax_rocket.plot(
         [0], [heights[0]],
-        marker = "v",
-        color = "orange",
-        markersize = 8,
-        linestyle = "None",
-        visible = False,
-        transform = ax_rocket.transData + flame_offset
+        marker="v",
+        color="orange",
+        markersize=8,
+        linestyle="None",
+        visible=False,
+        transform=ax_rocket.transData + flame_offset
     )
 
     status_text = ax_rocket.text(
@@ -63,7 +63,7 @@ def animate_flight(result, ignition_time, burn_thrust):
         0.97,
         "",
         transform=ax_rocket.transAxes,
-        va = "top"
+        va="top"
     )
 
 
@@ -122,21 +122,21 @@ def animate_flight(result, ignition_time, burn_thrust):
     axes["propellant"].set_xlabel("Time [s]")
 
     height_cursor = axes["height"].axvline(
-        x = 0,
-        color = "red",
-        linestyle = "--",
+        x=0,
+        color="red",
+        linestyle="--",
     )
 
     velocity_cursor = axes["velocity"].axvline(
-        x = 0,
-        color = "red",
-        linestyle = "--",
+        x=0,
+        color="red",
+        linestyle="--",
     )
 
     propellant_cursor = axes["propellant"].axvline(
-        x = 0,
-        color = "red",
-        linestyle = "--",
+        x=0,
+        color="red",
+        linestyle="--",
     )
 
     # Calculate the layout once and keep it fixed
@@ -151,12 +151,12 @@ def animate_flight(result, ignition_time, burn_thrust):
     animation = FuncAnimation(
         fig,
         update,
-        frames = playback_times,
-        init_func = init_animation,
-        interval = frame_interval,
-        repeat = False,
-        blit = True,
-        cache_frame_data = False,
+        frames=playback_times,
+        init_func=init_animation,
+        interval=frame_interval,
+        repeat=False,
+        blit=True,
+        cache_frame_data=False,
     )
 
     plt.show()
@@ -165,16 +165,16 @@ if __name__ == "__main__":
     ignition_time = 1
     burn_thrust = 2000
     result = simulate_fueled_delayed_ignition(
-        h0 = 100,
-        v0 = 0,
-        dry_mass = 100,
-        propellant_mass = 15,
-        g = 9.81,
-        ignition_time = ignition_time,
-        burn_thrust = burn_thrust,
-        specific_impulse = 200,
-        dt = 0.05,
-        max_time = 30,
+        h0=100,
+        v0=0,
+        dry_mass=100,
+        propellant_mass=15,
+        g=9.81,
+        ignition_time=ignition_time,
+        burn_thrust=burn_thrust,
+        specific_impulse=200,
+        dt=0.05,
+        max_time=30,
     )
 
     animate_flight(result, ignition_time, burn_thrust)
