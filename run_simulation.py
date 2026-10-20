@@ -1,4 +1,5 @@
 from physics import simulate_fueled_delayed_ignition
+from landing import classify_landing
 
 if __name__ == "__main__":
     h0 = 100
@@ -26,6 +27,9 @@ if __name__ == "__main__":
     )
 
     history = result["history"]
+    last_velocity = result["history"][-1][2]
+    ground_contact = result["termination_reason"] == "ground_contact"
+    landing_outcome = classify_landing(last_velocity, ground_contact)
 
     for elapsed, height, velocity, propellant in history:
         print(
@@ -35,3 +39,4 @@ if __name__ == "__main__":
                 f"Propellant: {propellant:.5f} [kg]"
             )
     print(f"Termination reason: {result["termination_reason"]}")
+    print(f"Landing outcome: {landing_outcome}")
