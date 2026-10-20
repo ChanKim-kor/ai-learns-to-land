@@ -4,7 +4,7 @@ from physics import (free_fall_velocity, simulate_free_fall,
                      simulate_constant_thrust, simulate_delayed_ignition,
                      simulate_fueled_delayed_ignition, step_fueled_flight)
 
-class TestFreeFall(unittest.TestCase):
+class TestPhysics(unittest.TestCase):
     def test_velocity_after_two_seconds(self):
         # Calculate the actual velocity and check the expected value here.
         velocity = -10
