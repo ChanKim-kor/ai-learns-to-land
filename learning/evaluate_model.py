@@ -4,6 +4,7 @@ import torch
 from torch import nn
 
 from learning.train_rocket_transition import run_episode
+from visualize_simulation import animate_flight
 
 if __name__ == "__main__":
     model = nn.Sequential(
@@ -42,3 +43,5 @@ if __name__ == "__main__":
         f"Recorded states: {len(result['history'])}\n"
         f"Recorded control intervals: {len(result['control_history'])}"
     )
+
+    animate_flight(result)

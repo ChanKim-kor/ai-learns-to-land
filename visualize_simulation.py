@@ -7,7 +7,7 @@ from physics import simulate_fueled_delayed_ignition
 
 from time import perf_counter
 
-def animate_flight(result, ignition_time, burn_thrust):
+def animate_flight(result, ignition_time=0, burn_thrust=0):
     fig, axes = plt.subplot_mosaic(
         [
             ["rocket", "height"],
@@ -22,6 +22,7 @@ def animate_flight(result, ignition_time, burn_thrust):
 
 
     history = result["history"]
+    control_history = result.get("control_history")
     times = [record[0] for record in history]
     heights = [record[1] for record in history]
     velocities = [record[2] for record in history]
@@ -90,11 +91,25 @@ def animate_flight(result, ignition_time, burn_thrust):
         velocity_cursor.set_xdata([frame_time, frame_time])
         propellant_cursor.set_xdata([frame_time, frame_time])
         
-        if frame_time >= ignition_time and propellant > 0 and burn_thrust > 0:
-            flame.set_visible(True)
-            flame.set_data([0], [height])
+        if control_history is not None:
+            engine_on = False
+
+            for start, end, thrust in control_history:
+                if start <= frame_time < end:
+                    engine_on = thrust > 0
+                    break
         else:
-            flame.set_visible(False)
+            engine_on = (
+                frame_time >= ignition_time
+                and propellant > 0
+                and burn_thrust > 0
+                and frame_time < duration
+            )
+
+        flame.set_visible(engine_on)
+
+        if engine_on:
+            flame.set_data([0], [height])
 
         status_text.set_text(
             f"Time: {frame_time:.2f} [s]\n"
