@@ -16,7 +16,7 @@ if __name__ == "__main__":
     model_path = (
         Path(__file__).resolve().parents[1]
         / "runs"
-        / "final_model.pt"
+        / "best_model.pt"
     )
     print(f"Loaded model: {model_path.name}")
     state = torch.load(
@@ -44,4 +44,23 @@ if __name__ == "__main__":
         f"Recorded control intervals: {len(result['control_history'])}"
     )
 
+    previous_thrust = None
+
+    for index in range(len(result["control_history"])):
+        start, end, thrust = result["control_history"][index]
+
+        if thrust != previous_thrust:
+            elapsed, height, velocity, propellant = (
+                result["history"][index]
+            )
+            engine_status = "ON" if thrust > 0 else "OFF"
+
+            print(
+                f"Time: {start:.3f} [s] | "
+                f"Engine: {engine_status} | "
+                f"Height: {height:.3f} [m] | "
+                f"Velocity: {velocity:.3f} [m/s] | "
+                f"Propellant: {propellant:.3f} [kg]"
+            )
+        previous_thrust = thrust
     animate_flight(result)
