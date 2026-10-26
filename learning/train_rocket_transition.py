@@ -244,6 +244,9 @@ if __name__ == "__main__":
     )
     print(f"Before training: {before_training}")
 
+    best_reward = before_training["final_reward"]
+    best_episode = 0
+    best_state = deepcopy(model.state_dict())
 
     episode_count = 50
     epsilon_start = 0.8
@@ -272,6 +275,12 @@ if __name__ == "__main__":
                 epsilon=0.0, target_model=target_model, training=False
             )
             evaluation_history.append((episode, mid_training))
+
+            if mid_training["final_reward"] > best_reward:
+                best_reward = mid_training["final_reward"]
+                best_episode = episode
+                best_state = deepcopy(model.state_dict())
+
             print(f"--------------------\n"
                   f"Evaluation after episode {episode}: {mid_training}"
                   )
@@ -279,6 +288,12 @@ if __name__ == "__main__":
         model, optimizer, replay_buffer=replay_buffer,
         epsilon=0.0, target_model=target_model, training=False
     )
+
+    if after_training["final_reward"] > best_reward:
+        best_reward = after_training["final_reward"]
+        best_episode = episode_count
+        best_state = deepcopy(model.state_dict())
+
     evaluation_history.append((episode_count, after_training))
     print(f"--------------------")
     print(f"After training: {after_training}")
@@ -302,8 +317,17 @@ if __name__ == "__main__":
             row["episode"] = episode
             writer.writerow(row)
 
+    print(f"--------------------")
     print(f"Evaluation history saved to {output_path}")
 
     model_path = output_dir / "final_model.pt"
     torch.save(model.state_dict(), model_path)
     print(f"Model weights saved to: {model_path}")
+
+    best_model_path = output_dir / "best_model.pt"
+    torch.save(best_state, best_model_path)
+
+    print(
+        f"Best evaluation: episode={best_episode}, "
+        f"reward={best_reward:.3f}"
+    )

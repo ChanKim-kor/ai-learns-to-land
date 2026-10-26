@@ -18,7 +18,7 @@ if __name__ == "__main__":
         / "runs"
         / "final_model.pt"
     )
-
+    print(f"Loaded model: {model_path.name}")
     state = torch.load(
         model_path,
         map_location="cpu",
