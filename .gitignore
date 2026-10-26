@@ -4,3 +4,5 @@
 # Python Bytecode Caches
 __pycache__/
 *.pyc
+
+runs/
