@@ -266,3 +266,10 @@ Code, comments, and project documentation are written in English. Google Drive
 holds project plans and decision records; GitHub holds code, tests, and the
 repository documentation. The roadmap will evolve as implementation and
 experiments reveal what is needed.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE). Reuse, modification,
+and redistribution, including commercial use, are welcome under its terms.
+Keep the copyright and permission notice with copies or substantial portions
+of the software. The software is provided without warranty.
