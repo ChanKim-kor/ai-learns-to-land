@@ -13,9 +13,13 @@ The one-dimensional physics model, flight playback, landing classification, and
 manual engine controls are implemented. The manual flight view supports live
 ON/OFF commands, fuel-dependent flame display, landing feedback, and restart.
 
-Neural-network and Q-learning calculation exercises are organized in `learning/`.
-They currently use illustrative data. A rocket-connected reinforcement learning
-environment and a trained landing agent have not been implemented yet.
+The `learning/` package contains both introductory neural-network exercises
+and a rocket-connected Q-learning experiment with experience replay, a target
+network, periodic evaluation, model saving, and policy flight playback.
+
+**Work in progress:** the agent does not land reliably yet. Training behavior
+and failure cases are being investigated. This is an educational experiment,
+not a finished landing controller or a realistic flight simulator.
 
 Implemented:
 
@@ -37,6 +41,10 @@ Implemented:
   expansion, flight outcome display, and restart after or during a flight.
 - Learning exercises covering manual gradients, PyTorch autograd, SGD, linear
   layers, a shared hidden layer, and one Q-learning update.
+- Rocket-connected episodes with ON/OFF engine actions, experience replay,
+  batch Q-value updates, and a target network.
+- Evaluation history, final and best-evaluation model checkpoints, reward
+  plots, and saved-policy flight playback with engine-switch timing.
 
 ## Physics Model
 
@@ -143,6 +151,50 @@ Run the unit tests and the convergence experiment:
 The convergence experiment reports height and velocity errors for progressively
 smaller time steps. It is separate from the unit test suite.
 
+## Rocket Learning Experiment
+
+Run the following modules from the repository root, after installing the
+dependencies above. First, train the current experimental agent:
+
+```powershell
+.\.venv\Scripts\python.exe -m learning.train_rocket_transition
+```
+
+The script currently runs 50 training episodes, with exploration-free evaluations
+before training, every five episodes, and after training. It sets both the Python
+and PyTorch random seeds to 0. This is a single-seed experiment, not evidence of
+reliable performance across runs or starting conditions.
+
+After completion, it writes these files under `runs/`:
+
+| File | Contents |
+| --- | --- |
+| `evaluation_history.csv` | Periodic evaluation results, including final vertical velocity, outcome, termination reason, and reward |
+| `final_model.pt` | Network weights at the end of training |
+| `best_model.pt` | Weights with the highest recorded evaluation reward, including the pre-training evaluation |
+
+Re-running training overwrites these files. Copy results elsewhere before
+starting another experiment if you want to keep them. The `runs/` directory is
+excluded from Git; a fresh clone does not contain these outputs.
+
+After training, plot the saved evaluation history:
+
+```powershell
+.\.venv\Scripts\python.exe -m learning.plot_training
+```
+
+Or evaluate and replay the policy in `runs/best_model.pt`:
+
+```powershell
+.\.venv\Scripts\python.exe -m learning.evaluate_model
+```
+
+Playback prints the flight outcome, final vertical velocity, and engine ON/OFF times.
+The plot and playback commands need their respective files from a completed
+training run; running them before training results in a missing-file error.
+The best recorded reward does not mean the model can land successfully or
+reliably. Current experiments still include crashes and time-limit outcomes.
+
 ## Learning Exercises
 
 Run these modules from the repository root with the project environment:
@@ -178,35 +230,37 @@ tracking before updating the selected current-state Q value.
 | `run_convergence.py` | Comparison with analytical continuous-burn references |
 | `visualize_simulation.py` | Flight playback and synchronized plots |
 | `manual_control.py` | Live engine controls, state/flame display, flight outcomes, and restart |
-| `learning/` | Python package containing the neural-network and Q-update exercises |
+| `learning/` | Python package containing introductory exercises and the rocket-learning experiment |
+| `learning/train_rocket_transition.py` | Rocket-connected training, replay, periodic evaluation, and checkpoint saving |
+| `learning/plot_training.py` | Reward plot from the saved evaluation history |
+| `learning/evaluate_model.py` | Saved-policy evaluation, flight playback, and engine-switch timing |
 | `requirements.txt` | Python dependency installation |
 
 ## Next Steps
 
-1. **Generate a real rocket transition.** Replace the illustrative next state in
-   the Q-update exercise with a result from `step_fueled_flight`. Derive the
-   observation, contact flag, and reward from that result.
-2. **Create a reusable learning environment.** Separate reset, observations,
-   engine actions, physical progression, rewards, and episode ending from the
-   user interface. Decide the action interval, observation scaling, reward
-   rules, and treatment of time limits before full training.
-3. **Train and evaluate an initial agent.** Add exploration and the learning
-   machinery needed for repeated experience, including replay and a target
-   network if using DQN. Compare landing success, contact speed, and fuel use
-   across starting conditions. A rule-based controller remains an optional
-   comparison rather than a prerequisite.
-4. **Improve presentation and prepare a public release.** After AI control is
-   working, refine rocket graphics, flames, the landing scene, and the display.
-   Document reproducible results and limitations.
-5. **Extend the physics and control.** Explore drag and other model refinements,
-   then extend to horizontal motion and attitude in two dimensions. Validate
-   each extension before assessing its effect on control and learning.
+1. **Investigate failed landings.** Inspect engine actions, flight trajectories,
+   terminal rewards, and time-limit behavior. Test explanations for failures
+   rather than treating one improved flight as a solved task.
+2. **Make experiments easier to compare.** Record settings alongside results,
+   preserve separate runs, and evaluate multiple seeds and starting conditions.
+   Compare landing outcomes and contact speeds, not reward alone.
+3. **Improve the learning interface and its checks.** As the experiment develops,
+   clarify episode-ending rules, separate reusable environment responsibilities,
+   and add focused checks for training and evaluation behavior.
+4. **Share progress and limitations.** Keep the setup instructions and development
+   notes aligned with the implementation. Improve the visual presentation when
+   it helps explain the behavior.
+5. **Extend the physics and control later.** Explore drag and other refinements,
+   then horizontal motion and attitude in two dimensions. Validate each extension
+   before assessing its effect on control and learning.
 
 ## Development Approach
 
-The project author implements the physics and simulation code while learning
-Python and software development. AI assists with design discussions, exercises,
-hints, code review, verification, and documentation.
+This is a learning project developed with substantial AI assistance. The AI
+assistant wrote most of the code. The author participates by asking questions,
+working through explanations, reviewing behavior, suggesting changes, and
+deciding what to investigate next. Understanding the physics, Python tools,
+and learning process is an ongoing part of the project.
 
 Code, comments, and project documentation are written in English. Google Drive
 holds project plans and decision records; GitHub holds code, tests, and the
